@@ -1,0 +1,145 @@
+﻿
+e:\Class\website\src\components\ChatWidget.jsx
+  3:10  error  'motion' is defined but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+
+e:\Class\website\src\components\Classes.jsx
+  1:10  error  'motion' is defined but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+
+e:\Class\website\src\components\Hero.jsx
+  1:10  error  'motion' is defined but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+
+e:\Class\website\src\components\Navbar.jsx
+  3:10  error  'motion' is defined but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+
+e:\Class\website\src\components\ParticleBackground.jsx
+  22:9  warning  Compilation Skipped: Inline `class` declarations are not supported
+
+Move class declarations outside of components/hooks.
+
+  20 |         const particleCount = 50;
+  21 |
+> 22 |         class Particle {
+     |         ^^^^^^^^^^^^^^^^
+> 23 |             constructor() {
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 24 |                 this.x = Math.random() * canvas.width;
+     ΓÇª
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 44 |             }
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 45 |         }
+     | ^^^^^^^^^^ Inline `class` declarations are not supported
+  46 |
+  47 |         for (let i = 0; i < particleCount; i++) {
+  48 |             particles.push(new Particle());
+
+  react-hooks/unsupported-syntax
+
+e:\Class\website\src\components\Teachers.jsx
+  1:10  error  'motion' is defined but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+
+e:\Class\website\src\pages\AdminDashboard.jsx
+  52:38  error    Error: Cannot access variable before it is declared
+
+`loadData` is accessed before it is declared, which prevents the earlier access from updating when this value changes over time.
+
+  50 |     } else {
+  51 |       setUser(currentUser);
+> 52 |       const init = async () => await loadData();
+     |                                      ^^^^^^^^ `loadData` accessed before it is declared
+  53 |       init();
+  54 |     }
+  55 |   }, [navigate]);
+
+  55 |   }, [navigate]);
+  56 |
+> 57 |   const loadData = async () => {
+     |   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 58 |     const [users, subjects, modules, notices, liveSessions] = await Promise.all([
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 59 |        getUsers(), getSubjects(), getModules(), getNotices(), getLiveSessions()
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 60 |     ]);
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 61 |     setUsersList(users);
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 62 |     setSubjectsList(subjects);
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 63 |     setModulesList(modules);
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 64 |     setNoticesList(notices);
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 65 |     setLiveSessionsList(liveSessions);
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 66 |   };
+     | ^^^^^ `loadData` is declared here
+  67 |
+  68 |   // Prepare module grouping
+  69 |   const groupedModules = modulesList.reduce((acc, mod) => {  react-hooks/immutability
+  84:6   warning  React Hook useEffect has a missing dependency: 'availableModuleGrades'. Either include it or remove the dependency array                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                react-hooks/exhaustive-deps
+
+e:\Class\website\src\pages\Dashboard.jsx
+  13:10  error  'activeTab' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u     no-unused-vars
+  13:21  error  'setActiveTab' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+
+e:\Class\website\src\pages\GradeModulesView.jsx
+  19:5  error  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+  17 |       return;
+  18 |     }
+> 19 |     setUser(currentUser);
+     |     ^^^^^^^ Avoid calling setState() directly within an effect
+  20 |
+  21 |     const loadData = async () => {
+  22 |       const subIdNum = Number(subjectId);  react-hooks/set-state-in-effect
+
+e:\Class\website\src\pages\Login.jsx
+   7:16  error  'setCode' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u    no-unused-vars
+   9:10  error  'isLoading' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+  52:22  error  'studentCode' is not defined                                                               no-undef
+  53:32  error  'setStudentCode' is not defined                                                            no-undef
+  63:22  error  'password' is not defined                                                                  no-undef
+  64:32  error  'setPassword' is not defined                                                               no-undef
+
+e:\Class\website\src\pages\ModuleEditor.jsx
+  76:9  error  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+  74 |         navigate('/dashboard'); // Cannot create a module without a subject and grade
+  75 |       } else {
+> 76 |         setFormData(prev => ({ ...prev, subject_id: parseInt(subjectIdParam), grade: parseInt(gradeParam) }));
+     |         ^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  77 |       }
+  78 |     }
+  79 |   }, [id, isEditing, navigate, subjectIdParam, gradeParam]);  react-hooks/set-state-in-effect
+
+e:\Class\website\src\pages\SubjectView.jsx
+  32:5  error  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+  30 |       return;
+  31 |     }
+> 32 |     setUser(currentUser);
+     |     ^^^^^^^ Avoid calling setState() directly within an effect
+  33 |
+  34 |     const fetchData = async () => {
+  35 |       const subId = Number(id);  react-hooks/set-state-in-effect
+
+Γ£û 19 problems (17 errors, 2 warnings)
+

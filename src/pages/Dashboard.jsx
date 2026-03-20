@@ -9,7 +9,7 @@ const Dashboard = () => {
   const [notices, setNotices] = useState([]);
   const [liveSessions, setLiveSessions] = useState([]);
   const [showLiveModal, setShowLiveModal] = useState(false);
-  const [liveForm, setLiveForm] = useState({ title: '', link: '', target: 'all', date: '', time: '' });
+  const [liveForm, setLiveForm] = useState({ title: '', link: '', target: 'all', date: '', time: '', subject_id: '' });
   const [activeTab, setActiveTab] = useState('6');
   const navigate = useNavigate();
 
@@ -57,7 +57,7 @@ const Dashboard = () => {
     e.preventDefault();
     await addLiveSession(liveForm);
     setShowLiveModal(false);
-    setLiveForm({ title: '', link: '', target: 'all', date: '', time: '' });
+    setLiveForm({ title: '', link: '', target: 'all', date: '', time: '', subject_id: '' });
     const freshSessions = await getLiveSessions();
     setLiveSessions(freshSessions);
   };
@@ -165,7 +165,12 @@ const Dashboard = () => {
                     </span>
                     <Video size={20} className="text-rose-300" />
                   </div>
-                  <h3 className="text-xl font-bold text-slate-900 mb-4">{session.title}</h3>
+                  <h3 className="text-xl font-bold text-slate-900 mb-3">{session.title}</h3>
+                  {session.subject_id && (
+                    <p className="flex items-center gap-2 text-indigo-600 text-sm font-bold mb-3">
+                      <BookOpen size={14} /> {subjects.find(s => s.id === session.subject_id)?.name || 'Subject'}
+                    </p>
+                  )}
                   <div className="space-y-2 mb-6">
                     <div className="flex items-center gap-2 text-slate-600 text-sm font-medium">
                       <Calendar size={16} className="text-slate-400" /> {session.date}
@@ -219,6 +224,13 @@ const Dashboard = () => {
               <div>
                 <label className="block text-sm font-bold text-slate-700 mb-2">Topic / Title</label>
                 <input required type="text" value={liveForm.title} onChange={e => setLiveForm({...liveForm, title: e.target.value})} className="w-full px-4 py-3 rounded-lg border border-slate-200 focus:ring-2 focus:ring-rose-500 outline-none" placeholder="e.g. Science Revision Q&A" />
+              </div>
+              <div>
+                <label className="block text-sm font-bold text-slate-700 mb-2">Subject</label>
+                <select value={liveForm.subject_id} onChange={e => setLiveForm({...liveForm, subject_id: e.target.value})} className="w-full px-4 py-3 rounded-lg border border-slate-200 focus:ring-2 focus:ring-rose-500 outline-none font-medium text-slate-700">
+                  <option value="">— No specific subject —</option>
+                  {displaySubjects.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                </select>
               </div>
               <div>
                 <label className="block text-sm font-bold text-slate-700 mb-2">Meeting Link (Zoom, Teams, Meet)</label>

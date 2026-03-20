@@ -35,7 +35,7 @@ const AdminDashboard = () => {
 
   const [showLiveForm, setShowLiveForm] = useState(false);
   const [editingLiveId, setEditingLiveId] = useState(null);
-  const [liveForm, setLiveForm] = useState({ title: '', link: '', target: 'all', date: '', time: '' });
+  const [liveForm, setLiveForm] = useState({ title: '', link: '', target: 'all', date: '', time: '', subject_id: '' });
 
   const [showEnrollModal, setShowEnrollModal] = useState(false);
   const [enrollStudent, setEnrollStudent] = useState(null);
@@ -247,13 +247,13 @@ const AdminDashboard = () => {
     }
     setShowLiveForm(false);
     setEditingLiveId(null);
-    setLiveForm({ title: '', link: '', target: 'all', date: '', time: '' });
+    setLiveForm({ title: '', link: '', target: 'all', date: '', time: '', subject_id: '' });
     await loadData();
   };
 
   const handleEditLive = (s) => {
     setEditingLiveId(s.id);
-    setLiveForm({ title: s.title, link: s.link, target: s.target, date: s.date, time: s.time });
+    setLiveForm({ title: s.title, link: s.link, target: s.target, date: s.date, time: s.time, subject_id: s.subject_id || '' });
     setShowLiveForm(true);
   };
 
@@ -731,15 +731,22 @@ const AdminDashboard = () => {
                   <Video size={20} /> {editingLiveId ? 'Edit Live Class' : 'Schedule Live Class'}
                 </h3>
                 <form onSubmit={handleLiveSubmit} className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-slate-700 mb-1">Topic / Title</label>
                       <input required type="text" value={liveForm.title} onChange={e => setLiveForm({...liveForm, title: e.target.value})} className="w-full px-4 py-2 rounded-lg border focus:ring-2 focus:ring-rose-500" placeholder="E.g. Grade 6 Science Live" />
                     </div>
                     <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1">Subject</label>
+                      <select value={liveForm.subject_id} onChange={e => setLiveForm({...liveForm, subject_id: e.target.value})} className="w-full px-4 py-2 rounded-lg border focus:ring-2 focus:ring-rose-500 bg-white">
+                        <option value="">— No specific subject —</option>
+                        {subjectsList.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                      </select>
+                    </div>
+                    <div>
                       <label className="block text-sm font-medium text-slate-700 mb-1">Target Audience</label>
                       <select required value={liveForm.target} onChange={e => setLiveForm({...liveForm, target: e.target.value})} className="w-full px-4 py-2 rounded-lg border focus:ring-2 focus:ring-rose-500 bg-white">
-                        <option value="all">All Grades (Students & Teachers)</option>
+                        <option value="all">All Grades (Students &amp; Teachers)</option>
                         {[6,7,8,9,10,11].map(g => <option key={g} value={String(g)}>Grade {g}</option>)}
                       </select>
                     </div>
@@ -787,6 +794,11 @@ const AdminDashboard = () => {
                   </div>
                   <h3 className="text-lg font-bold text-slate-800 mb-2">{s.title}</h3>
                   <div className="space-y-1 mb-4 flex-grow">
+                     {s.subject_id && (
+                       <p className="text-rose-600 text-sm font-semibold flex items-center gap-2">
+                         <BookOpen size={14}/> {subjectsList.find(sub => sub.id === s.subject_id)?.name || 'Unknown Subject'}
+                       </p>
+                     )}
                      <p className="text-slate-600 text-sm flex items-center gap-2"><Calendar size={14}/> {s.date}</p>
                      <p className="text-slate-600 text-sm flex items-center gap-2"><Clock size={14}/> {s.time}</p>
                      <p className="text-slate-600 text-sm truncate mt-2 font-mono bg-slate-50 p-1 rounded border overflow-hidden"><a href={s.link} target="_blank" rel="noreferrer" className="text-blue-500 hover:underline">{s.link}</a></p>

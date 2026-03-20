@@ -1,31 +1,37 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { authService, getModules, getQuizzes } from '../services/db';
-import { ArrowLeft, PlayCircle, FileText, CheckCircle, HelpCircle } from 'lucide-react';
+import { authService, getModules, getQuizzes, getProgress, markModuleComplete, unmarkModuleComplete } from '../services/db';
+import { ArrowLeft, PlayCircle, FileText, CheckCircle, HelpCircle, CheckSquare } from 'lucide-react';
 
 const CourseViewer = () => {
     const { id } = useParams();
     const navigate = useNavigate();
     const [module, setModule] = useState(null);
     const [moduleQuiz, setModuleQuiz] = useState(null);
-    const [activeTab, setActiveTab] = useState('video'); // 'video', 'notes', 'quiz'
+    const [activeTab, setActiveTab] = useState('video');
+    const [user, setUser] = useState(null);
+    const [isCompleted, setIsCompleted] = useState(false);
+    const [completing, setCompleting] = useState(false);
     
     useEffect(() => {
-        const user = authService.getCurrentUser();
-        if (!user) {
+        const currentUser = authService.getCurrentUser();
+        if (!currentUser) {
             navigate('/login');
             return;
         }
+        setUser(currentUser);
 
         const loadCourse = async () => {
-            const [modules, quizzes] = await Promise.all([getModules(), getQuizzes()]);
+            const [modules, quizzes, progress] = await Promise.all([
+                getModules(), getQuizzes(), getProgress(currentUser.id)
+            ]);
             const foundModule = modules.find(m => m.id === parseInt(id));
             if (foundModule) {
                 setModule(foundModule);
                 const foundQuiz = quizzes.find(q => q.module_id === foundModule.id);
                 setModuleQuiz(foundQuiz);
-                
-                // Default to video if exists, else notes
+                setIsCompleted(progress.some(p => p.module_id === foundModule.id));
+
                 if (foundModule.content_json?.videoUrl) {
                     setActiveTab('video');
                 } else if (foundModule.content_json?.notes) {
@@ -36,15 +42,29 @@ const CourseViewer = () => {
                     setActiveTab('notes');
                 }
             } else {
-                navigate('/dashboard'); // Module not found
+                navigate('/dashboard');
             }
         };
         loadCourse();
     }, [id, navigate]);
 
+    const handleToggleComplete = async () => {
+        if (!user || !module) return;
+        setCompleting(true);
+        if (isCompleted) {
+            await unmarkModuleComplete(user.id, module.id);
+            setIsCompleted(false);
+        } else {
+            await markModuleComplete(user.id, module.id);
+            setIsCompleted(true);
+        }
+        setCompleting(false);
+    };
+
     if (!module) return <div className="min-h-screen bg-slate-50 pt-32 text-center">Loading...</div>;
 
     const { content_json } = module;
+    const isStudent = user?.role === 'student';
 
     return (
         <div className="min-h-screen bg-slate-50 pt-24 pb-12">
@@ -55,13 +75,28 @@ const CourseViewer = () => {
                     <Link to="/dashboard" className="p-2 bg-white rounded-full shadow-sm text-slate-600 hover:text-purple-600 transition-colors">
                         <ArrowLeft size={24} />
                     </Link>
-                    <div>
+                    <div className="flex-1">
                         <h1 className="text-2xl md:text-3xl font-bold text-slate-900">{module.title}</h1>
                         <p className="text-slate-500 flex items-center gap-2 text-sm mt-1">
                             <span className="px-2 py-0.5 bg-purple-100 text-purple-700 rounded text-xs font-bold">{module.category}</span>
                             Grade {module.grade} Module
                         </p>
                     </div>
+                    {/* Mark Complete Button */}
+                    {isStudent && (
+                        <button
+                            onClick={handleToggleComplete}
+                            disabled={completing}
+                            className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold transition-all shadow-sm ${
+                                isCompleted
+                                    ? 'bg-emerald-500 text-white hover:bg-emerald-600 shadow-emerald-200'
+                                    : 'bg-white text-slate-600 border border-slate-200 hover:border-emerald-400 hover:text-emerald-600'
+                            }`}
+                        >
+                            <CheckCircle size={20} />
+                            {completing ? 'Saving...' : isCompleted ? 'Completed ✓' : 'Mark Complete'}
+                        </button>
+                    )}
                 </div>
 
                 {/* Main Content Area */}

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { authService, getUsers, addUser, updateUser, deleteUser, getModules, deleteModule, updateModule, getNotices, addNotice, updateNotice, deleteNotice, getLiveSessions, addLiveSession, updateLiveSession, deleteLiveSession, getSubjects, addSubject, updateSubject, deleteSubject } from '../services/db';
-import { Users, FileText, Trash2, Edit, Plus, UserPlus, BookOpen, GraduationCap, Briefcase, Bell, Send, Eye, EyeOff, Video, Calendar, Clock, CheckSquare, Layers } from 'lucide-react';
+import { Users, FileText, Trash2, Edit, Plus, UserPlus, BookOpen, GraduationCap, Briefcase, Bell, Send, Eye, EyeOff, Video, Calendar, Clock, CheckSquare, Layers, CalendarDays, Sparkles } from 'lucide-react';
 
 const AdminDashboard = () => {
   const [user, setUser] = useState(null);
@@ -386,6 +386,16 @@ const AdminDashboard = () => {
           >
             <Video size={20} /> Live Classes
           </button>
+          <Link to="/timetable"
+            className="flex items-center gap-2 px-6 py-3 rounded-xl font-bold transition-all bg-white text-slate-600 border border-slate-200 hover:bg-slate-50"
+          >
+            <CalendarDays size={20} /> Timetable
+          </Link>
+          <Link to="/quiz-generator"
+            className="flex items-center gap-2 px-6 py-3 rounded-xl font-bold transition-all bg-white text-purple-600 border border-purple-200 hover:bg-purple-50"
+          >
+            <Sparkles size={20} /> AI Quizzes
+          </Link>
         </div>
 
         {/* --- USERS TAB CONTENT (Students or Teachers) --- */}

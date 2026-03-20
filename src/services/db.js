@@ -173,3 +173,48 @@ export const updateQuiz = async (moduleId, updatedQuiz) => {
   if (error) { console.error(error); return null; }
   return data;
 };
+
+// --- PROGRESS DB HANDLERS ---
+export const getProgress = async (userId) => {
+  const { data, error } = await supabase.from('lms_progress').select('*').eq('user_id', userId);
+  if (error) { console.error(error); return []; }
+  return data;
+};
+
+export const markModuleComplete = async (userId, moduleId) => {
+  const { data, error } = await supabase
+    .from('lms_progress')
+    .upsert({ user_id: userId, module_id: moduleId }, { onConflict: 'user_id,module_id' })
+    .select().single();
+  if (error) { console.error(error); return null; }
+  return data;
+};
+
+export const unmarkModuleComplete = async (userId, moduleId) => {
+  const { error } = await supabase.from('lms_progress').delete().eq('user_id', userId).eq('module_id', moduleId);
+  if (error) console.error(error);
+};
+
+// --- TIMETABLE DB HANDLERS ---
+export const getTimetable = async () => {
+  const { data, error } = await supabase.from('lms_timetable').select('*').order('grade').order('day').order('time');
+  if (error) { console.error(error); return []; }
+  return data;
+};
+
+export const addTimetableEntry = async (entry) => {
+  const { data, error } = await supabase.from('lms_timetable').insert(entry).select().single();
+  if (error) { console.error(error); return null; }
+  return data;
+};
+
+export const updateTimetableEntry = async (id, entry) => {
+  const { data, error } = await supabase.from('lms_timetable').update(entry).eq('id', id).select().single();
+  if (error) { console.error(error); return null; }
+  return data;
+};
+
+export const deleteTimetableEntry = async (id) => {
+  const { error } = await supabase.from('lms_timetable').delete().eq('id', id);
+  if (error) console.error(error);
+};

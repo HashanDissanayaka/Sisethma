@@ -9,6 +9,8 @@ import SubjectView from './pages/SubjectView';
 import AdminDashboard from './pages/AdminDashboard';
 import GradeModulesView from './pages/GradeModulesView';
 import ChatWidget from './components/ChatWidget';
+import QuizGenerator from './pages/QuizGenerator';
+import Timetable from './pages/Timetable';
 
 function App() {
   return (
@@ -26,6 +28,8 @@ function App() {
           <Route path="/module/new" element={<ModuleEditor />} />
           <Route path="/module/edit/:id" element={<ModuleEditor />} />
           <Route path="/admin" element={<AdminDashboard />} />
+          <Route path="/quiz-generator" element={<QuizGenerator />} />
+          <Route path="/timetable" element={<Timetable />} />
         </Routes>
       </div>
     </Router>

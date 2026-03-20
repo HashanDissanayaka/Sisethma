@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { authService, getSubjects, getNotices, getLiveSessions, addLiveSession, getUsers } from '../services/db';
-import { BookOpen, User, Plus, Bell, Video, X, Calendar, Clock, ExternalLink, Layers } from 'lucide-react';
+import { authService, getSubjects, getNotices, getLiveSessions, addLiveSession, getUsers, getProgress, getModules } from '../services/db';
+import { BookOpen, User, Plus, Bell, Video, X, Calendar, Clock, ExternalLink, Layers, BarChart2, CalendarDays } from 'lucide-react';
 
 const Dashboard = () => {
   const [user, setUser] = useState(null);
@@ -11,6 +11,8 @@ const Dashboard = () => {
   const [showLiveModal, setShowLiveModal] = useState(false);
   const [liveForm, setLiveForm] = useState({ title: '', link: '', target: 'all', date: '', time: '', subject_id: '' });
   const [activeTab, setActiveTab] = useState('6');
+  const [progress, setProgress] = useState([]);
+  const [allModules, setAllModules] = useState([]);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -19,14 +21,20 @@ const Dashboard = () => {
       navigate('/login');
     } else {
       const loadData = async () => {
-         const [usersData, subjectsData, noticesData, liveData] = await Promise.all([
-            getUsers(), getSubjects(), getNotices(), getLiveSessions()
+         const [usersData, subjectsData, noticesData, liveData, modulesData] = await Promise.all([
+            getUsers(), getSubjects(), getNotices(), getLiveSessions(), getModules()
          ]);
          const freshUser = usersData.find(u => u.id === currentUser.id);
-         setUser(freshUser || currentUser);
+         const resolvedUser = freshUser || currentUser;
+         setUser(resolvedUser);
          setSubjects(subjectsData);
          setNotices(noticesData);
          setLiveSessions(liveData);
+         setAllModules(modulesData);
+         if (resolvedUser.role === 'student') {
+           const prog = await getProgress(resolvedUser.id);
+           setProgress(prog);
+         }
       };
       loadData();
     }
@@ -116,11 +124,21 @@ const Dashboard = () => {
           </div>
           {isTeacher && (
             <div className="flex flex-wrap gap-3">
+              <Link to="/timetable" className="flex items-center gap-2 px-6 py-3 bg-indigo-500 text-white font-bold rounded-lg hover:bg-indigo-600 transition-colors shadow-lg shadow-indigo-200">
+                <CalendarDays size={20} />
+                Timetable
+              </Link>
               <button onClick={() => setShowLiveModal(true)} className="flex items-center gap-2 px-6 py-3 bg-rose-500 text-white font-bold rounded-lg hover:bg-rose-600 transition-colors shadow-lg shadow-rose-200">
                 <Video size={20} />
                 Schedule Class
               </button>
             </div>
+          )}
+          {user?.role === 'student' && (
+            <Link to="/timetable" className="flex items-center gap-2 px-5 py-3 bg-indigo-50 text-indigo-700 font-bold rounded-lg hover:bg-indigo-100 transition-colors border border-indigo-200">
+              <CalendarDays size={20} />
+              My Timetable
+            </Link>
           )}
         </div>
 
@@ -189,6 +207,38 @@ const Dashboard = () => {
                   </a>
                 </div>
               ))}
+            </div>
+          </div>
+        )}
+
+        {/* Progress Section (Students only) */}
+        {user?.role === 'student' && displaySubjects.length > 0 && (
+          <div className="mb-8">
+            <h2 className="text-2xl font-bold text-slate-900 mb-6 flex items-center gap-2">
+              <BarChart2 className="text-purple-500" /> Your Progress
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {displaySubjects.map(sub => {
+                const subModules = allModules.filter(m => m.subject_id === sub.id && m.grade === user.grade && m.isActive !== false);
+                const completedCount = subModules.filter(m => progress.some(p => p.module_id === m.id)).length;
+                const total = subModules.length;
+                const pct = total === 0 ? 0 : Math.round((completedCount / total) * 100);
+                return (
+                  <div key={sub.id} className="bg-white rounded-2xl p-5 shadow-sm border border-slate-100">
+                    <div className="flex justify-between items-center mb-2">
+                      <p className="font-bold text-slate-800">{sub.name}</p>
+                      <span className={`text-sm font-bold ${pct === 100 ? 'text-emerald-600' : 'text-slate-500'}`}>{pct}%</span>
+                    </div>
+                    <div className="w-full bg-slate-100 rounded-full h-3 overflow-hidden">
+                      <div
+                        className={`h-3 rounded-full transition-all duration-700 ${pct === 100 ? 'bg-emerald-500' : 'bg-purple-500'}`}
+                        style={{ width: `${pct}%` }}
+                      />
+                    </div>
+                    <p className="text-xs text-slate-400 mt-2">{completedCount} / {total} modules completed</p>
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}

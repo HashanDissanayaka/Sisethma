@@ -43,18 +43,7 @@ const AdminDashboard = () => {
 
   const navigate = useNavigate();
 
-  useEffect(() => {
-    const currentUser = authService.getCurrentUser();
-    if (!currentUser || currentUser.role !== 'admin') {
-      navigate('/login');
-    } else {
-      setUser(currentUser);
-      const init = async () => await loadData();
-      init();
-    }
-  }, [navigate]);
-
-  async function loadData() {
+  const loadData = async () => {
     const [users, subjects, modules, notices, liveSessions] = await Promise.all([
        getUsers(), getSubjects(), getModules(), getNotices(), getLiveSessions()
     ]);
@@ -64,6 +53,16 @@ const AdminDashboard = () => {
     setNoticesList(notices);
     setLiveSessionsList(liveSessions);
   };
+
+  useEffect(() => {
+    const currentUser = authService.getCurrentUser();
+    if (!currentUser || currentUser.role !== 'admin') {
+      navigate('/login');
+    } else {
+      setUser(currentUser);
+      loadData();
+    }
+  }, [navigate]);
 
   // Prepare module grouping
   const groupedModules = modulesList.reduce((acc, mod) => {

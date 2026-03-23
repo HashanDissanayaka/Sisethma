@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react';
+﻿import { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { authService, getModules, getQuizzes, getProgress, markModuleComplete, unmarkModuleComplete } from '../services/db';
-import { ArrowLeft, PlayCircle, FileText, CheckCircle, HelpCircle, CheckSquare } from 'lucide-react';
+import { ArrowLeft, PlayCircle, FileText, CheckCircle, HelpCircle, RotateCcw, Trophy } from 'lucide-react';
 
 const CourseViewer = () => {
     const { id } = useParams();
@@ -12,7 +12,13 @@ const CourseViewer = () => {
     const [user, setUser] = useState(null);
     const [isCompleted, setIsCompleted] = useState(false);
     const [completing, setCompleting] = useState(false);
-    
+
+    // Quiz state
+    const [selectedAnswers, setSelectedAnswers] = useState({});  // { [questionId]: selectedOption }
+    const [quizSubmitted, setQuizSubmitted] = useState(false);
+    const [quizScore, setQuizScore] = useState(null);
+    const [quizError, setQuizError] = useState('');
+
     useEffect(() => {
         const currentUser = authService.getCurrentUser();
         if (!currentUser) {
@@ -61,15 +67,166 @@ const CourseViewer = () => {
         setCompleting(false);
     };
 
+    // Normalize the "correct answer" to always be the string value of the option,
+    // supporting both the AI format (string) and the manual format (index).
+    const getCorrectAnswerString = (q) => {
+        if (typeof q.answer === 'number') {
+            return q.options[q.answer] ?? '';
+        }
+        return String(q.answer);
+    };
+
+    const handleSelectAnswer = (questionId, optionText) => {
+        if (quizSubmitted) return;
+        setSelectedAnswers(prev => ({ ...prev, [questionId]: optionText }));
+    };
+
+    const handleSubmitQuiz = () => {
+        if (!moduleQuiz) return;
+        const unanswered = moduleQuiz.questions.filter(q => selectedAnswers[q.id] === undefined);
+        if (unanswered.length > 0) {
+            setQuizError(`Please answer all questions. You have ${unanswered.length} unanswered.`);
+            return;
+        }
+        setQuizError('');
+        let correct = 0;
+        moduleQuiz.questions.forEach(q => {
+            if (selectedAnswers[q.id] === getCorrectAnswerString(q)) correct++;
+        });
+        setQuizScore(correct);
+        setQuizSubmitted(true);
+    };
+
+    const handleResetQuiz = () => {
+        setSelectedAnswers({});
+        setQuizSubmitted(false);
+        setQuizScore(null);
+        setQuizError('');
+    };
+
     if (!module) return <div className="min-h-screen bg-slate-50 pt-32 text-center">Loading...</div>;
 
     const { content_json } = module;
     const isStudent = user?.role === 'student';
 
+    const renderQuiz = () => {
+        if (!moduleQuiz) return null;
+        const total = moduleQuiz.questions.length;
+
+        if (quizSubmitted) {
+            const pct = Math.round((quizScore / total) * 100);
+            const passed = pct >= 60;
+            return (
+                <div>
+                    <div className={`rounded-2xl p-8 text-center mb-8 ${passed ? 'bg-emerald-50 border border-emerald-200' : 'bg-red-50 border border-red-200'}`}>
+                        <Trophy size={48} className={`mx-auto mb-4 ${passed ? 'text-emerald-500' : 'text-red-400'}`} />
+                        <h2 className={`text-3xl font-bold mb-2 ${passed ? 'text-emerald-800' : 'text-red-800'}`}>
+                            {passed ? 'ðŸŽ‰ Well Done!' : 'Keep Studying!'}
+                        </h2>
+                        <p className={`text-lg ${passed ? 'text-emerald-700' : 'text-red-700'}`}>
+                            You scored <strong>{quizScore}/{total}</strong> ({pct}%)
+                        </p>
+                    </div>
+                    <div className="space-y-6 mb-8">
+                        {moduleQuiz.questions.map((q, idx) => {
+                            const correctAnswer = getCorrectAnswerString(q);
+                            const chosen = selectedAnswers[q.id];
+                            const isCorrect = chosen === correctAnswer;
+                            return (
+                                <div key={q.id} className={`rounded-xl p-5 border-2 ${isCorrect ? 'border-emerald-300 bg-emerald-50' : 'border-red-300 bg-red-50'}`}>
+                                    <h3 className="font-bold text-slate-800 mb-4">{idx + 1}. {q.question}</h3>
+                                    <div className="space-y-2">
+                                        {q.options.map((opt, optIdx) => {
+                                            const isChosen = opt === chosen;
+                                            const isRight = opt === correctAnswer;
+                                            let cls = 'flex items-center gap-3 p-3 rounded-lg border text-sm font-medium ';
+                                            if (isRight) cls += 'border-emerald-400 bg-emerald-100 text-emerald-800';
+                                            else if (isChosen && !isRight) cls += 'border-red-400 bg-red-100 text-red-800 line-through';
+                                            else cls += 'border-slate-200 bg-white text-slate-500';
+                                            return (
+                                                <div key={optIdx} className={cls}>
+                                                    <span className="w-6 h-6 rounded-full bg-slate-200 text-slate-600 text-xs flex items-center justify-center font-bold shrink-0">
+                                                        {String.fromCharCode(65 + optIdx)}
+                                                    </span>
+                                                    {opt}
+                                                    {isRight && <span className="ml-auto text-emerald-600 font-bold">âœ“</span>}
+                                                    {isChosen && !isRight && <span className="ml-auto text-red-600 font-bold">âœ—</span>}
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                    <button
+                        onClick={handleResetQuiz}
+                        className="w-full py-4 border-2 border-purple-300 text-purple-700 font-bold rounded-xl hover:bg-purple-50 transition-colors flex items-center justify-center gap-2"
+                    >
+                        <RotateCcw size={18} /> Try Again
+                    </button>
+                </div>
+            );
+        }
+
+        return (
+            <div>
+                <h2 className="text-xl font-bold text-slate-900 mb-2 flex items-center gap-2">
+                    <HelpCircle className="text-purple-600" /> Knowledge Check
+                </h2>
+                <p className="text-slate-500 mb-8 border-b pb-4">
+                    Answer all {total} questions. Time limit: {moduleQuiz.time_limit}s.
+                </p>
+                <div className="space-y-8">
+                    {moduleQuiz.questions.map((q, idx) => {
+                        const chosen = selectedAnswers[q.id];
+                        return (
+                            <div key={q.id} className="bg-slate-50 rounded-xl p-6 border border-slate-200">
+                                <h3 className="font-bold text-slate-800 mb-4">{idx + 1}. {q.question}</h3>
+                                <div className="space-y-3">
+                                    {q.options.map((opt, optIdx) => {
+                                        const isSelected = chosen === opt;
+                                        return (
+                                            <label
+                                                key={optIdx}
+                                                onClick={() => handleSelectAnswer(q.id, opt)}
+                                                className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
+                                                    isSelected
+                                                        ? 'border-purple-400 bg-purple-50 text-purple-800'
+                                                        : 'border-slate-200 bg-white text-slate-700 hover:border-purple-300'
+                                                }`}
+                                            >
+                                                <span className={`w-6 h-6 rounded-full text-xs flex items-center justify-center font-bold shrink-0 ${isSelected ? 'bg-purple-600 text-white' : 'bg-slate-200 text-slate-600'}`}>
+                                                    {String.fromCharCode(65 + optIdx)}
+                                                </span>
+                                                {opt}
+                                            </label>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        );
+                    })}
+
+                    {quizError && (
+                        <p className="text-red-600 font-medium bg-red-50 px-4 py-3 rounded-lg border border-red-200">{quizError}</p>
+                    )}
+
+                    <button
+                        onClick={handleSubmitQuiz}
+                        className="w-full py-4 bg-purple-600 text-white font-bold rounded-xl hover:bg-purple-700 transition-colors shadow-lg shadow-purple-200 mt-4"
+                    >
+                        Submit Answers
+                    </button>
+                </div>
+            </div>
+        );
+    };
+
     return (
         <div className="min-h-screen bg-slate-50 pt-24 pb-12">
             <div className="container mx-auto px-6 max-w-5xl">
-                
+
                 {/* Header */}
                 <div className="mb-6 flex items-center gap-4">
                     <Link to="/dashboard" className="p-2 bg-white rounded-full shadow-sm text-slate-600 hover:text-purple-600 transition-colors">
@@ -94,18 +251,18 @@ const CourseViewer = () => {
                             }`}
                         >
                             <CheckCircle size={20} />
-                            {completing ? 'Saving...' : isCompleted ? 'Completed ✓' : 'Mark Complete'}
+                            {completing ? 'Saving...' : isCompleted ? 'Completed âœ“' : 'Mark Complete'}
                         </button>
                     )}
                 </div>
 
                 {/* Main Content Area */}
                 <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden flex flex-col md:flex-row min-h-[600px]">
-                    
+
                     {/* Sidebar Tabs */}
                     <div className="w-full md:w-64 bg-slate-50 border-b md:border-b-0 md:border-r border-slate-200 p-4 shrink-0 flex flex-row md:flex-col gap-2 overflow-x-auto">
                         {content_json?.videoUrl && (
-                            <button 
+                            <button
                                 onClick={() => setActiveTab('video')}
                                 className={`flex items-center justify-center md:justify-start gap-3 px-4 py-3 rounded-xl font-medium transition-colors whitespace-nowrap md:whitespace-normal ${activeTab === 'video' ? 'bg-purple-600 text-white' : 'text-slate-600 hover:bg-slate-200'}`}
                             >
@@ -114,7 +271,7 @@ const CourseViewer = () => {
                             </button>
                         )}
                         {(content_json?.notes || !content_json?.videoUrl) && (
-                            <button 
+                            <button
                                 onClick={() => setActiveTab('notes')}
                                 className={`flex items-center justify-center md:justify-start gap-3 px-4 py-3 rounded-xl font-medium transition-colors whitespace-nowrap md:whitespace-normal ${activeTab === 'notes' ? 'bg-purple-600 text-white' : 'text-slate-600 hover:bg-slate-200'}`}
                             >
@@ -123,8 +280,8 @@ const CourseViewer = () => {
                             </button>
                         )}
                         {moduleQuiz && (
-                            <button 
-                                onClick={() => setActiveTab('quiz')}
+                            <button
+                                onClick={() => { setActiveTab('quiz'); handleResetQuiz(); }}
                                 className={`flex items-center justify-center md:justify-start gap-3 px-4 py-3 rounded-xl font-medium transition-colors whitespace-nowrap md:whitespace-normal ${activeTab === 'quiz' ? 'bg-purple-600 text-white' : 'text-slate-600 hover:bg-slate-200'}`}
                             >
                                 <HelpCircle size={20} />
@@ -141,9 +298,9 @@ const CourseViewer = () => {
                                     <PlayCircle className="text-purple-600" /> Watch Lesson
                                 </h2>
                                 <div className="relative w-full aspect-video rounded-xl overflow-hidden bg-slate-900 shadow-inner">
-                                    <iframe 
-                                        src={content_json.videoUrl} 
-                                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                                    <iframe
+                                        src={content_json.videoUrl}
+                                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                                         allowFullScreen
                                         className="absolute top-0 left-0 w-full h-full border-0"
                                     ></iframe>
@@ -167,32 +324,7 @@ const CourseViewer = () => {
                                 <p>No notes available for this module.</p>
                             </div>
                         ) : activeTab === 'quiz' && moduleQuiz ? (
-                            <div className="">
-                                <h2 className="text-xl font-bold text-slate-900 mb-2 flex items-center gap-2">
-                                    <CheckCircle className="text-purple-600" /> Knowledge Check
-                                </h2>
-                                <p className="text-slate-500 mb-8 border-b pb-4">Test your knowledge on this module. Time limit: {moduleQuiz.time_limit}s.</p>
-                                
-                                <div className="space-y-8">
-                                    {moduleQuiz.questions.map((q, idx) => (
-                                        <div key={q.id} className="bg-slate-50 rounded-xl p-6 border border-slate-200">
-                                            <h3 className="font-bold text-slate-800 mb-4">{idx + 1}. {q.question}</h3>
-                                            <div className="space-y-3">
-                                                {q.options.map((opt, optIdx) => (
-                                                    <label key={optIdx} className="flex items-center gap-3 p-3 rounded-lg bg-white border border-slate-200 cursor-pointer hover:border-purple-300 transition-colors">
-                                                        <input type="radio" name={`question-${q.id}`} className="w-4 h-4 text-purple-600 focus:ring-purple-500" />
-                                                        <span className="text-slate-700">{opt}</span>
-                                                    </label>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    ))}
-                                    
-                                    <button className="w-full py-4 bg-purple-600 text-white font-bold rounded-xl hover:bg-purple-700 transition-colors shadow-lg shadow-purple-200 mt-4">
-                                        Submit Answers
-                                    </button>
-                                </div>
-                            </div>
+                            renderQuiz()
                         ) : null}
                     </div>
                 </div>
@@ -200,5 +332,6 @@ const CourseViewer = () => {
         </div>
     );
 };
+
 
 export default CourseViewer;

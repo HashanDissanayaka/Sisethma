@@ -10,7 +10,6 @@ const Dashboard = () => {
   const [liveSessions, setLiveSessions] = useState([]);
   const [showLiveModal, setShowLiveModal] = useState(false);
   const [liveForm, setLiveForm] = useState({ title: '', link: '', target: 'all', date: '', time: '', subject_id: '' });
-  const [activeTab, setActiveTab] = useState('6');
   const [progress, setProgress] = useState([]);
   const [allModules, setAllModules] = useState([]);
   const navigate = useNavigate();

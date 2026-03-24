@@ -293,21 +293,62 @@ export const getFinanceSummary = async () => {
   };
 };
 
-// --- ENROLLMENT DB HANDLERS ---
+// --- ENROLLMENT DB HAND// Enrollment Handlers
 export const getEnrollments = async () => {
-  const { data, error } = await supabase.from('lms_enrollments').select('*, lms_users(name, student_code), lms_subjects(name)');
-  if (error) { console.error(error); return []; }
-  return data;
+    const { data, error } = await supabase.from('lms_enrollments').select(`
+        *,
+        student:lms_users!student_id(id, fullname, grade, username),
+        subject:lms_subjects!subject_id(id, name)
+    `);
+    if (error) throw error;
+    return data;
 };
 
-export const updateEnrollment = async (id, updatedEnrollment) => {
-  const { data, error } = await supabase.from('lms_enrollments').update(updatedEnrollment).eq('id', id).select().single();
-  if (error) { console.error(error); return null; }
-  return data;
+export const updateEnrollmentStatus = async (id, status) => {
+    const { error } = await supabase.from('lms_enrollments').update({ status }).eq('id', id);
+    if (error) throw error;
 };
 
 export const addEnrollment = async (enrollment) => {
-  const { data, error } = await supabase.from('lms_enrollments').insert(enrollment).select().single();
-  if (error) { console.error(error); return null; }
-  return data;
+    const { error } = await supabase.from('lms_enrollments').upsert(enrollment, { onConflict: 'student_id, subject_id' });
+    if (error) throw error;
+};
+
+// Fee Configuration Handlers
+export const getFeeConfigs = async () => {
+    const { data, error } = await supabase.from('lms_fee_configs').select('*');
+    if (error) throw error;
+    return data;
+};
+
+export const upsertFeeConfig = async (config) => {
+    const { error } = await supabase.from('lms_fee_configs').upsert(config, { onConflict: 'subject_id, grade' });
+    if (error) throw error;
+};
+
+// Advanced Balance Handler
+export const getStudentBalances = async () => {
+    const [enrollments, fees, configs] = await Promise.all([
+        getEnrollments(),
+        getFees(),
+        getFeeConfigs()
+    ]);
+
+    const balances = enrollments.map(en => {
+        const studentFees = fees.filter(f => f.student_id === en.student_id && f.subject_id === en.subject_id);
+        const totalPaid = studentFees.reduce((sum, f) => sum + Number(f.amount), 0);
+        
+        const config = configs.find(c => c.subject_id === en.subject_id && c.grade === en.student?.grade);
+        
+        // Simple balance logic: Total Paid vs Expected 
+        // Note: For a real system, we'd calculate monthly expected based on enrollment date.
+        // For now, we'll just show total paid and the standard fee.
+        return {
+            ...en,
+            totalPaid,
+            standardFee: en.payment_frequency === 'weekly' ? config?.weekly_fee : config?.monthly_fee
+        };
+    });
+
+    return balances;
 };

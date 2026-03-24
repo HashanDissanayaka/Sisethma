@@ -67,7 +67,10 @@ const Navbar = () => {
             {user ? (
               <div className="flex items-center gap-4">
                 {user.role === 'admin' && (
-                  <Link to="/admin" className="text-sm font-bold text-red-600 hover:text-red-700 transition-colors">Admin Portal</Link>
+                  <>
+                    <Link to="/admin" className="text-sm font-bold text-red-600 hover:text-red-700 transition-colors">Admin Portal</Link>
+                    <Link to="/finance" className="text-sm font-bold text-emerald-600 hover:text-emerald-700 transition-colors">Finance</Link>
+                  </>
                 )}
                 <Link to="/dashboard" className="text-sm font-medium text-slate-600 hover:text-purple-500 transition-colors">Dashboard</Link>
                 <button onClick={handleLogout} className="px-5 py-2 bg-red-500 text-white rounded-full text-sm font-bold hover:bg-red-600 transition-colors">
@@ -116,7 +119,10 @@ const Navbar = () => {
                 {user ? (
                   <>
                     {user.role === 'admin' && (
-                      <Link to="/admin" onClick={() => setIsMobileMenuOpen(false)} className="text-2xl font-bold text-red-600">Admin Portal</Link>
+                      <>
+                        <Link to="/admin" onClick={() => setIsMobileMenuOpen(false)} className="text-2xl font-bold text-red-600">Admin Portal</Link>
+                        <Link to="/finance" onClick={() => setIsMobileMenuOpen(false)} className="text-2xl font-bold text-emerald-600">Finance</Link>
+                      </>
                     )}
                     <Link to="/dashboard" onClick={() => setIsMobileMenuOpen(false)} className="text-2xl font-medium text-purple-600">Dashboard</Link>
                     <button onClick={() => { handleLogout(); setIsMobileMenuOpen(false); }} className="text-2xl font-medium text-red-500">Logout</button>

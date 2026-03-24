@@ -218,3 +218,59 @@ export const deleteTimetableEntry = async (id) => {
   const { error } = await supabase.from('lms_timetable').delete().eq('id', id);
   if (error) console.error(error);
 };
+
+// --- FINANCE DB HANDLERS ---
+export const getFees = async () => {
+  const { data, error } = await supabase.from('lms_fees').select('*, lms_users(name, student_code)').order('payment_date', { ascending: false });
+  if (error) { console.error(error); return []; }
+  return data;
+};
+
+export const addFee = async (fee) => {
+  const { data, error } = await supabase.from('lms_fees').insert(fee).select().single();
+  if (error) { console.error(error); return null; }
+  return data;
+};
+
+export const getSalaries = async () => {
+  const { data, error } = await supabase.from('lms_salaries').select('*, lms_users(name)').order('payment_date', { ascending: false });
+  if (error) { console.error(error); return []; }
+  return data;
+};
+
+export const addSalary = async (salary) => {
+  const { data, error } = await supabase.from('lms_salaries').insert(salary).select().single();
+  if (error) { console.error(error); return null; }
+  return data;
+};
+
+export const getExpenses = async () => {
+  const { data, error } = await supabase.from('lms_expenses').select('*').order('expense_date', { ascending: false });
+  if (error) { console.error(error); return []; }
+  return data;
+};
+
+export const addExpense = async (expense) => {
+  const { data, error } = await supabase.from('lms_expenses').insert(expense).select().single();
+  if (error) { console.error(error); return null; }
+  return data;
+};
+
+export const getFinanceSummary = async () => {
+  const [fees, salaries, expenses] = await Promise.all([
+    supabase.from('lms_fees').select('amount'),
+    supabase.from('lms_salaries').select('amount'),
+    supabase.from('lms_expenses').select('amount')
+  ]);
+  
+  const totalFees = (fees.data || []).reduce((sum, f) => sum + Number(f.amount), 0);
+  const totalSalaries = (salaries.data || []).reduce((sum, s) => sum + Number(s.amount), 0);
+  const totalExpenses = (expenses.data || []).reduce((sum, e) => sum + Number(e.amount), 0);
+  
+  return {
+    totalFees,
+    totalSalaries,
+    totalExpenses,
+    balance: totalFees - totalSalaries - totalExpenses
+  };
+};

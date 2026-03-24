@@ -11,6 +11,7 @@ import GradeModulesView from './pages/GradeModulesView';
 import ChatWidget from './components/ChatWidget';
 import QuizGenerator from './pages/QuizGenerator';
 import Timetable from './pages/Timetable';
+import FinanceDashboard from './pages/FinanceDashboard';
 
 function App() {
   return (
@@ -30,6 +31,7 @@ function App() {
           <Route path="/admin" element={<AdminDashboard />} />
           <Route path="/quiz-generator" element={<QuizGenerator />} />
           <Route path="/timetable" element={<Timetable />} />
+          <Route path="/finance" element={<FinanceDashboard />} />
         </Routes>
       </div>
     </Router>

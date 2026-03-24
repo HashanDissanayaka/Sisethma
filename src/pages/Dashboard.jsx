@@ -345,7 +345,7 @@ const Dashboard = () => {
                 <label className="block text-sm font-bold text-slate-700 mb-2">Target Audience</label>
                 <select value={liveForm.target} onChange={e => setLiveForm({...liveForm, target: e.target.value})} className="w-full px-4 py-3 rounded-lg border border-slate-200 focus:ring-2 focus:ring-rose-500 outline-none font-medium text-slate-700">
                   <option value="all">Broadcast to All Grades</option>
-                  {[6, 7, 8, 9, 10, 11].map(g => <option key={g} value={g}>Grade {g} Students Only</option>)}
+                  {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].map(g => <option key={g} value={g}>Grade {g} Students Only</option>)}
                 </select>
               </div>
               <div className="grid grid-cols-2 gap-4">

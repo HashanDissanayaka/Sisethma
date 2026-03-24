@@ -383,12 +383,12 @@ const FinanceDashboard = () => {
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-slate-100">
-                                        {subjects.map(sub => [6,7,8,9,10,11].map(grade => {
+                                        {subjects?.length > 0 ? subjects.map(sub => [1,2,3,4,5,6,7,8,9,10,11].map(grade => {
                                             const config = feeConfigs.find(c => c.subject_id === sub.id && c.grade === grade);
                                             return (
                                                 <tr key={`${sub.id}-${grade}`} className="hover:bg-slate-50 transition">
                                                     <td className="px-6 py-4 text-slate-800 font-medium">{sub.name}</td>
-                                                    <td className="px-6 py-4 text-slate-600 font-bold">Grade {grade}</td>
+                                                    <td className="px-6 py-4 text-slate-600 font-bold text-xs">GR {grade}</td>
                                                     <td className="px-6 py-4 text-emerald-600 font-bold">Rs. {config?.monthly_fee?.toLocaleString() || '0'}</td>
                                                     <td className="px-6 py-4 text-blue-600 font-bold">Rs. {config?.weekly_fee?.toLocaleString() || '0'}</td>
                                                     <td className="px-6 py-4 text-right">
@@ -409,7 +409,13 @@ const FinanceDashboard = () => {
                                                     </td>
                                                 </tr>
                                             );
-                                        }))}
+                                        })) : (
+                                            <tr>
+                                                <td colSpan="5" className="px-6 py-12 text-center text-slate-400">
+                                                    No subjects found. Add subjects in the admin portal first.
+                                                </td>
+                                            </tr>
+                                        )}
                                     </tbody>
                                 </table>
                             </div>
@@ -764,7 +770,7 @@ const FinanceDashboard = () => {
                                     required
                                 >
                                     <option value="">Select Grade</option>
-                                    {[6,7,8,9,10,11].map(g => <option key={g} value={g}>Grade {g}</option>)}
+                                    {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].map(g => <option key={g} value={g}>Grade {g} Students Only</option>)}
                                 </select>
                             </div>
                             <div className="grid grid-cols-2 gap-4">

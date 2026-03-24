@@ -1,11 +1,37 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { authService, getSubjects, getNotices, getLiveSessions, addLiveSession, getUsers, getProgress, getModules } from '../services/db';
-import { BookOpen, User, Plus, Bell, Video, X, Calendar, Clock, ExternalLink, Layers, BarChart2, CalendarDays } from 'lucide-react';
+import { 
+  authService, 
+  getSubjects, 
+  getNotices, 
+  getLiveSessions, 
+  addLiveSession, 
+  getUsers, 
+  getProgress, 
+  getModules,
+  getEnrollments
+} from '../services/db';
+import { 
+  BookOpen, 
+  User, 
+  Plus, 
+  Bell, 
+  Video, 
+  X, 
+  Calendar, 
+  Clock, 
+  ExternalLink, 
+  Layers, 
+  BarChart2, 
+  CalendarDays,
+  Lock,
+  ShieldAlert
+} from 'lucide-react';
 
 const Dashboard = () => {
   const [user, setUser] = useState(null);
   const [subjects, setSubjects] = useState([]);
+  const [enrollments, setEnrollments] = useState([]);
   const [notices, setNotices] = useState([]);
   const [liveSessions, setLiveSessions] = useState([]);
   const [showLiveModal, setShowLiveModal] = useState(false);
@@ -20,8 +46,8 @@ const Dashboard = () => {
       navigate('/login');
     } else {
       const loadData = async () => {
-         const [usersData, subjectsData, noticesData, liveData, modulesData] = await Promise.all([
-            getUsers(), getSubjects(), getNotices(), getLiveSessions(), getModules()
+         const [usersData, subjectsData, noticesData, liveData, modulesData, enrollmentsData] = await Promise.all([
+            getUsers(), getSubjects(), getNotices(), getLiveSessions(), getModules(), getEnrollments()
          ]);
          const freshUser = usersData.find(u => u.id === currentUser.id);
          const resolvedUser = freshUser || currentUser;
@@ -30,6 +56,7 @@ const Dashboard = () => {
          setNotices(noticesData);
          setLiveSessions(liveData);
          setAllModules(modulesData);
+         setEnrollments(enrollmentsData);
          if (resolvedUser.role === 'student') {
            const prog = await getProgress(resolvedUser.id);
            setProgress(prog);
@@ -41,11 +68,20 @@ const Dashboard = () => {
 
   const isTeacher = user?.role === 'teacher';
   
-  // Subjects logic: Show only assigned subjects. Hide inactive subjects.
+  // Subjects logic: Show only assigned subjects. 
   let displaySubjects = subjects.filter(s => user?.assigned_subjects?.some(as => as.subject_id === s.id));
   displaySubjects = displaySubjects.filter(s => s.isActive !== false);
 
   if (!user) return null;
+
+  // Function to check if a subject is locked for a student
+  const isSubjectLocked = (subjectId) => {
+    if (user.role !== 'student') return false;
+    const enrollment = enrollments.find(e => e.student_id === user.id && e.subject_id === subjectId);
+    // If no enrollment record exists, we assume active for now (backwards compatibility) 
+    // unless you want strict enrollment-only access.
+    return enrollment && enrollment.status === 'inactive';
+  };
 
   // Filter notices to relevant ones
   const displayNotices = notices.filter(n => {
@@ -70,6 +106,7 @@ const Dashboard = () => {
   };
 
   const renderSubjectCard = (sub) => {
+    const locked = isSubjectLocked(sub.id);
     let assignedGradesText = '';
     if (isTeacher) {
        const assignment = user.assigned_subjects?.find(as => as.subject_id === sub.id);
@@ -84,7 +121,20 @@ const Dashboard = () => {
     }
 
     return (
-    <div key={sub.id} className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 hover:shadow-md transition-shadow group flex flex-col">
+    <div key={sub.id} className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 hover:shadow-md transition-shadow group flex flex-col relative overflow-hidden">
+      {locked && (
+        <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-[2px] z-10 flex flex-col items-center justify-center p-6 text-center">
+            <div className="p-4 bg-rose-500 text-white rounded-full mb-4 shadow-lg">
+                <Lock size={32} />
+            </div>
+            <h4 className="text-white font-bold text-lg mb-1">Access Disabled</h4>
+            <p className="text-rose-100 text-sm mb-4">Payment required for this subject. Please contact the class coordinator.</p>
+            <div className="flex items-center gap-2 px-4 py-2 bg-white/20 text-white rounded-lg text-xs font-bold border border-white/30">
+                <ShieldAlert size={14} /> Subject Locked
+            </div>
+        </div>
+      )}
+      
       <div className="flex items-start justify-between mb-4">
         <div className="p-3 bg-indigo-50 text-indigo-600 rounded-xl group-hover:bg-indigo-600 group-hover:text-white transition-colors">
           <BookOpen size={24} />
@@ -96,13 +146,19 @@ const Dashboard = () => {
       <h3 className="text-xl font-bold text-slate-900 mb-2">{sub.name}</h3>
       <p className="text-slate-600 text-sm mb-6 line-clamp-2 flex-grow">{sub.description}</p>
       
-      <Link 
-        to={`/subject/${sub.id}`}
-        className="flex items-center justify-center gap-2 w-full py-3 bg-slate-50 hover:bg-slate-100 text-indigo-600 rounded-xl font-bold transition-colors"
-      >
-        <Layers size={20} />
-        {isTeacher ? 'Manage Curriculum' : 'View Modules'}
-      </Link>
+      {locked ? (
+        <div className="w-full py-3 bg-slate-100 text-slate-400 rounded-xl font-bold text-center cursor-not-allowed">
+            View Modules
+        </div>
+      ) : (
+        <Link 
+            to={`/subject/${sub.id}`}
+            className="flex items-center justify-center gap-2 w-full py-3 bg-slate-50 hover:bg-slate-100 text-indigo-600 rounded-xl font-bold transition-colors"
+        >
+            <Layers size={20} />
+            {isTeacher ? 'Manage Curriculum' : 'View Modules'}
+        </Link>
+      )}
     </div>
     );
   };

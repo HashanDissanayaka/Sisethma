@@ -221,7 +221,7 @@ export const deleteTimetableEntry = async (id) => {
 
 // --- FINANCE DB HANDLERS ---
 export const getFees = async () => {
-  const { data, error } = await supabase.from('lms_fees').select('*, lms_users(name, student_code)').order('payment_date', { ascending: false });
+  const { data, error } = await supabase.from('lms_fees').select('*, lms_users(name, student_code), lms_subjects(name)').order('payment_date', { ascending: false });
   if (error) { console.error(error); return []; }
   return data;
 };
@@ -229,6 +229,24 @@ export const getFees = async () => {
 export const addFee = async (fee) => {
   const { data, error } = await supabase.from('lms_fees').insert(fee).select().single();
   if (error) { console.error(error); return null; }
+  
+  // If the fee is for a specific subject, automatically re-enable the enrollment
+  if (fee.student_id && fee.subject_id) {
+    const nextDue = new Date();
+    // Simple logic: add 30 days for monthly, 7 for weekly. 
+    // In a real app we might want a more precise date.
+    nextDue.setDate(nextDue.getDate() + 30); 
+    
+    await supabase.from('lms_enrollments')
+      .upsert({ 
+        student_id: fee.student_id, 
+        subject_id: fee.subject_id, 
+        status: 'active',
+        last_payment_date: new Date().toISOString().split('T')[0],
+        next_due_date: nextDue.toISOString().split('T')[0]
+      }, { onConflict: 'student_id,subject_id' });
+  }
+  
   return data;
 };
 
@@ -273,4 +291,23 @@ export const getFinanceSummary = async () => {
     totalExpenses,
     balance: totalFees - totalSalaries - totalExpenses
   };
+};
+
+// --- ENROLLMENT DB HANDLERS ---
+export const getEnrollments = async () => {
+  const { data, error } = await supabase.from('lms_enrollments').select('*, lms_users(name, student_code), lms_subjects(name)');
+  if (error) { console.error(error); return []; }
+  return data;
+};
+
+export const updateEnrollment = async (id, updatedEnrollment) => {
+  const { data, error } = await supabase.from('lms_enrollments').update(updatedEnrollment).eq('id', id).select().single();
+  if (error) { console.error(error); return null; }
+  return data;
+};
+
+export const addEnrollment = async (enrollment) => {
+  const { data, error } = await supabase.from('lms_enrollments').insert(enrollment).select().single();
+  if (error) { console.error(error); return null; }
+  return data;
 };

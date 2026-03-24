@@ -9,7 +9,11 @@ import {
   addSalary, 
   getExpenses, 
   addExpense, 
-  getFinanceSummary 
+  getFinanceSummary,
+  getSubjects,
+  getEnrollments,
+  updateEnrollment,
+  addEnrollment
 } from '../services/db';
 import { 
   Wallet, 
@@ -26,7 +30,10 @@ import {
   ArrowLeft,
   Search,
   CheckCircle2,
-  AlertCircle
+  AlertCircle,
+  ShieldCheck,
+  ShieldAlert,
+  Calendar
 } from 'lucide-react';
 
 const FinanceDashboard = () => {
@@ -39,19 +46,22 @@ const FinanceDashboard = () => {
 
     // Data states
     const [allUsers, setAllUsers] = useState([]);
+    const [subjects, setSubjects] = useState([]);
+    const [enrollments, setEnrollments] = useState([]);
     const [fees, setFees] = useState([]);
     const [salaries, setSalaries] = useState([]);
     const [expenses, setExpenses] = useState([]);
     const [summary, setSummary] = useState({ totalFees: 0, totalSalaries: 0, totalExpenses: 0, balance: 0 });
 
     // UI state
-    const [activeTab, setActiveTab] = useState('summary'); // 'summary', 'fees', 'salaries', 'expenses'
-    const [showAddModal, setShowAddModal] = useState(null); // 'fee', 'salary', 'expense'
+    const [activeTab, setActiveTab] = useState('summary'); // 'summary', 'fees', 'enrollments', 'salaries', 'expenses'
+    const [showAddModal, setShowAddModal] = useState(null); // 'fee', 'salary', 'expense', 'enrollment'
 
     // Form states
-    const [feeForm, setFeeForm] = useState({ student_id: '', amount: '', month_for: new Date().toLocaleString('en-US', { month: 'long', year: 'numeric' }) });
+    const [feeForm, setFeeForm] = useState({ student_id: '', subject_id: '', amount: '', month_for: new Date().toLocaleString('en-US', { month: 'long', year: 'numeric' }) });
     const [salaryForm, setSalaryForm] = useState({ teacher_id: '', amount: '', month_for: new Date().toLocaleString('en-US', { month: 'long', year: 'numeric' }) });
     const [expenseForm, setExpenseForm] = useState({ category: 'Building', amount: '', description: '' });
+    const [enrollmentForm, setEnrollmentForm] = useState({ student_id: '', subject_id: '', payment_frequency: 'monthly' });
 
     useEffect(() => {
         const u = authService.getCurrentUser();
@@ -66,14 +76,18 @@ const FinanceDashboard = () => {
     const loadData = async () => {
         setLoading(true);
         try {
-            const [usersData, feesData, salariesData, expensesData, summaryData] = await Promise.all([
+            const [usersData, subjectsData, enrollmentsData, feesData, salariesData, expensesData, summaryData] = await Promise.all([
                 getUsers(),
+                getSubjects(),
+                getEnrollments(),
                 getFees(),
                 getSalaries(),
                 getExpenses(),
                 getFinanceSummary()
             ]);
             setAllUsers(usersData);
+            setSubjects(subjectsData);
+            setEnrollments(enrollmentsData);
             setFees(feesData);
             setSalaries(salariesData);
             setExpenses(expensesData);
@@ -88,18 +102,40 @@ const FinanceDashboard = () => {
 
     const handleAddFee = async (e) => {
         e.preventDefault();
-        if (!feeForm.student_id || !feeForm.amount) return;
+        if (!feeForm.student_id || !feeForm.amount || !feeForm.subject_id) return;
         setSubmitting(true);
         const res = await addFee(feeForm);
         if (res) {
-            setSuccess('Fee recorded successfully!');
+            setSuccess('Fee recorded successfully! Subject access automatically enabled/updated.');
             setShowAddModal(null);
-            setFeeForm({ student_id: '', amount: '', month_for: new Date().toLocaleString('en-US', { month: 'long', year: 'numeric' }) });
+            setFeeForm({ student_id: '', subject_id: '', amount: '', month_for: new Date().toLocaleString('en-US', { month: 'long', year: 'numeric' }) });
             loadData();
         } else {
             setError('Failed to record fee.');
         }
         setSubmitting(false);
+    };
+
+    const handleAddEnrollment = async (e) => {
+        e.preventDefault();
+        if (!enrollmentForm.student_id || !enrollmentForm.subject_id) return;
+        setSubmitting(true);
+        const res = await addEnrollment(enrollmentForm);
+        if (res) {
+            setSuccess('Student enrolled successfully!');
+            setShowAddModal(null);
+            setEnrollmentForm({ student_id: '', subject_id: '', payment_frequency: 'monthly' });
+            loadData();
+        } else {
+            setError('Failed to enroll student. They might already be enrolled in this subject.');
+        }
+        setSubmitting(false);
+    };
+
+    const toggleEnrollmentStatus = async (id, currentStatus) => {
+        const newStatus = currentStatus === 'active' ? 'inactive' : 'active';
+        const res = await updateEnrollment(id, { status: newStatus });
+        if (res) loadData();
     };
 
     const handleAddSalary = async (e) => {
@@ -144,6 +180,7 @@ const FinanceDashboard = () => {
 
     const students = allUsers.filter(u => u.role === 'student');
     const teachers = allUsers.filter(u => u.role === 'teacher');
+    const studentEnrollments = enrollments.filter(e => e.student_id === Number(feeForm.student_id));
 
     return (
         <div className="min-h-screen bg-slate-50 pt-28 pb-12">
@@ -158,16 +195,16 @@ const FinanceDashboard = () => {
                             <h1 className="text-3xl font-bold text-slate-900 flex items-center gap-3">
                                 <Wallet className="text-emerald-500" size={32} /> Finance Manager
                             </h1>
-                            <p className="text-slate-500 mt-1">Track student fees, teacher salaries, and class expenses.</p>
+                            <p className="text-slate-500 mt-1">Manage student fees, access control, and class expenses.</p>
                         </div>
                     </div>
 
                     <div className="flex gap-2">
+                        <button onClick={() => setShowAddModal('enrollment')} className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition font-bold shadow-lg shadow-indigo-100">
+                            <Plus size={18} /> New Enrollment
+                        </button>
                         <button onClick={() => setShowAddModal('fee')} className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 transition font-bold shadow-lg shadow-emerald-100">
                             <Plus size={18} /> Record Fee
-                        </button>
-                        <button onClick={() => setShowAddModal('expense')} className="flex items-center gap-2 px-4 py-2 bg-rose-600 text-white rounded-xl hover:bg-rose-700 transition font-bold shadow-lg shadow-rose-100">
-                            <Plus size={18} /> Record Expense
                         </button>
                     </div>
                 </div>
@@ -219,6 +256,7 @@ const FinanceDashboard = () => {
                 {/* Tabs */}
                 <div className="flex gap-4 mb-6 overflow-x-auto pb-2 no-scrollbar">
                     <button onClick={() => setActiveTab('summary')} className={`px-6 py-2 rounded-full font-bold transition whitespace-nowrap ${activeTab === 'summary' ? 'bg-slate-900 text-white' : 'bg-white text-slate-600 hover:bg-slate-100'}`}>Summary</button>
+                    <button onClick={() => setActiveTab('enrollments')} className={`px-6 py-2 rounded-full font-bold transition whitespace-nowrap ${activeTab === 'enrollments' ? 'bg-indigo-600 text-white' : 'bg-white text-slate-600 hover:bg-slate-100'}`}>Access Control</button>
                     <button onClick={() => setActiveTab('fees')} className={`px-6 py-2 rounded-full font-bold transition whitespace-nowrap ${activeTab === 'fees' ? 'bg-emerald-600 text-white' : 'bg-white text-slate-600 hover:bg-slate-100'}`}>Student Fees</button>
                     <button onClick={() => setActiveTab('salaries')} className={`px-6 py-2 rounded-full font-bold transition whitespace-nowrap ${activeTab === 'salaries' ? 'bg-rose-600 text-white' : 'bg-white text-slate-600 hover:bg-slate-100'}`}>Teacher Salaries</button>
                     <button onClick={() => setActiveTab('expenses')} className={`px-6 py-2 rounded-full font-bold transition whitespace-nowrap ${activeTab === 'expenses' ? 'bg-rose-600 text-white' : 'bg-white text-slate-600 hover:bg-slate-100'}`}>Other Expenses</button>
@@ -243,7 +281,10 @@ const FinanceDashboard = () => {
                                                     <h4 className="font-bold text-slate-800">
                                                         {t.student_id ? `Fee from ${t.lms_users?.name}` : t.teacher_id ? `Salary to ${t.lms_users?.name}` : t.category}
                                                     </h4>
-                                                    <p className="text-sm text-slate-500">{t.payment_date || t.expense_date} • {t.month_for || t.description}</p>
+                                                    <p className="text-sm text-slate-500">
+                                                        {t.payment_date || t.expense_date} • {t.month_for || t.description}
+                                                        {t.lms_subjects && ` • Subject: ${t.lms_subjects.name}`}
+                                                    </p>
                                                 </div>
                                             </div>
                                             <span className={`text-lg font-bold ${t.student_id ? 'text-emerald-600' : 'text-rose-600'}`}>
@@ -255,6 +296,59 @@ const FinanceDashboard = () => {
                         </div>
                     )}
 
+                    {activeTab === 'enrollments' && (
+                        <div className="p-0">
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-left">
+                                    <thead className="bg-slate-50 border-b border-slate-200">
+                                        <tr>
+                                            <th className="px-6 py-4 text-sm font-bold text-slate-600">Student</th>
+                                            <th className="px-6 py-4 text-sm font-bold text-slate-600">Subject</th>
+                                            <th className="px-6 py-4 text-sm font-bold text-slate-600">Plan</th>
+                                            <th className="px-6 py-4 text-sm font-bold text-slate-600">Status</th>
+                                            <th className="px-6 py-4 text-sm font-bold text-slate-600">Due Date</th>
+                                            <th className="px-6 py-4 text-sm font-bold text-slate-600 text-right">Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-100">
+                                        {enrollments.map((en, idx) => (
+                                            <tr key={idx} className="hover:bg-slate-50 transition">
+                                                <td className="px-6 py-4">
+                                                    <div className="font-bold text-slate-800">{en.lms_users?.name}</div>
+                                                    <div className="text-xs text-slate-400 font-mono">{en.lms_users?.student_code}</div>
+                                                </td>
+                                                <td className="px-6 py-4 text-slate-800 font-medium">{en.lms_subjects?.name}</td>
+                                                <td className="px-6 py-4">
+                                                    <span className={`px-3 py-1 rounded-full text-xs font-bold ${en.payment_frequency === 'weekly' ? 'bg-blue-50 text-blue-600' : 'bg-purple-50 text-purple-600'}`}>
+                                                        {en.payment_frequency}
+                                                    </span>
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    <span className={`flex items-center gap-1.5 font-bold text-sm ${en.status === 'active' ? 'text-emerald-600' : 'text-rose-600'}`}>
+                                                        {en.status === 'active' ? <ShieldCheck size={16} /> : <ShieldAlert size={16} />}
+                                                        {en.status === 'active' ? 'Enabled' : 'Disabled'}
+                                                    </span>
+                                                </td>
+                                                <td className="px-6 py-4 text-slate-600 text-sm flex items-center gap-2">
+                                                    <Calendar size={14} className="text-slate-400" />
+                                                    {en.next_due_date || 'N/A'}
+                                                </td>
+                                                <td className="px-6 py-4 text-right">
+                                                    <button 
+                                                        onClick={() => toggleEnrollmentStatus(en.id, en.status)}
+                                                        className={`px-4 py-1.5 rounded-lg text-xs font-bold transition ${en.status === 'active' ? 'bg-rose-50 text-rose-600 hover:bg-rose-100' : 'bg-emerald-50 text-emerald-600 hover:bg-emerald-100'}`}
+                                                    >
+                                                        {en.status === 'active' ? 'Disable Access' : 'Enable Access'}
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    )}
+
                     {activeTab === 'fees' && (
                         <div className="p-0">
                             <div className="overflow-x-auto">
@@ -262,17 +356,17 @@ const FinanceDashboard = () => {
                                     <thead className="bg-slate-50 border-b border-slate-200">
                                         <tr>
                                             <th className="px-6 py-4 text-sm font-bold text-slate-600">Student</th>
-                                            <th className="px-6 py-4 text-sm font-bold text-slate-600">Code</th>
+                                            <th className="px-6 py-4 text-sm font-bold text-slate-600">Subject</th>
                                             <th className="px-6 py-4 text-sm font-bold text-slate-600">Month</th>
                                             <th className="px-6 py-4 text-sm font-bold text-slate-600">Date</th>
-                                            <th className="px-6 py-4 text-sm font-bold text-slate-600">Amount</th>
+                                            <th className="px-6 py-4 text-sm font-bold text-slate-600 font-bold">Amount</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-slate-100">
                                         {fees.map((f, idx) => (
                                             <tr key={idx} className="hover:bg-slate-50 transition">
                                                 <td className="px-6 py-4 font-bold text-slate-800">{f.lms_users?.name}</td>
-                                                <td className="px-6 py-4 text-slate-500 font-mono text-sm">{f.lms_users?.student_code}</td>
+                                                <td className="px-6 py-4 text-slate-600 font-medium">{f.lms_subjects?.name || 'General'}</td>
                                                 <td className="px-6 py-4 text-slate-600 text-sm">{f.month_for}</td>
                                                 <td className="px-6 py-4 text-slate-600 text-sm">{f.payment_date}</td>
                                                 <td className="px-6 py-4 text-emerald-600 font-bold">Rs. {Number(f.amount).toLocaleString()}</td>
@@ -343,7 +437,132 @@ const FinanceDashboard = () => {
             </div>
 
             {/* Modals */}
-            {showAddModal && (
+            {showAddModal === 'enrollment' && (
+                <div className="fixed inset-0 z-[60] flex items-center justify-center p-6 bg-slate-900/60 backdrop-blur-sm">
+                    <div className="bg-white w-full max-w-md rounded-3xl shadow-2xl p-8 relative overflow-hidden">
+                        <button onClick={() => setShowAddModal(null)} className="absolute top-6 right-6 text-slate-400 hover:text-slate-600">
+                            <Plus size={24} className="rotate-45" />
+                        </button>
+                        <h2 className="text-2xl font-bold text-slate-900 mb-6 flex items-center gap-2">
+                             <Users className="text-indigo-500" /> New Enrollment
+                        </h2>
+                        <form onSubmit={handleAddEnrollment} className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-bold text-slate-700 mb-1">Student</label>
+                                <select 
+                                    className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none"
+                                    value={enrollmentForm.student_id}
+                                    onChange={e => setEnrollmentForm({...enrollmentForm, student_id: e.target.value})}
+                                    required
+                                >
+                                    <option value="">Select Student</option>
+                                    {students.map(s => <option key={s.id} value={s.id}>{s.name} ({s.student_code})</option>)}
+                                </select>
+                            </div>
+                            <div>
+                                <label className="block text-sm font-bold text-slate-700 mb-1">Subject</label>
+                                <select 
+                                    className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none"
+                                    value={enrollmentForm.subject_id}
+                                    onChange={e => setEnrollmentForm({...enrollmentForm, subject_id: e.target.value})}
+                                    required
+                                >
+                                    <option value="">Select Subject</option>
+                                    {subjects.map(s => <option key={s.id} value={s.id}>{s.name} (Grade {s.grade})</option>)}
+                                </select>
+                            </div>
+                            <div>
+                                <label className="block text-sm font-bold text-slate-700 mb-1">Payment Frequency</label>
+                                <select 
+                                    className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none"
+                                    value={enrollmentForm.payment_frequency}
+                                    onChange={e => setEnrollmentForm({...enrollmentForm, payment_frequency: e.target.value})}
+                                    required
+                                >
+                                    <option value="monthly">Monthly Payment</option>
+                                    <option value="weekly">Weekly Payment</option>
+                                </select>
+                            </div>
+                            <button type="submit" disabled={submitting} className="w-full py-4 rounded-xl text-white font-bold bg-indigo-600 shadow-lg shadow-indigo-100 hover:bg-indigo-700 transition flex items-center justify-center gap-2">
+                                {submitting ? <Loader2 size={20} className="animate-spin" /> : <ShieldCheck size={20} />}
+                                Enroll Student
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            {showAddModal === 'fee' && (
+                <div className="fixed inset-0 z-[60] flex items-center justify-center p-6 bg-slate-900/60 backdrop-blur-sm">
+                    <div className="bg-white w-full max-w-md rounded-3xl shadow-2xl p-8 relative overflow-hidden">
+                        <button onClick={() => setShowAddModal(null)} className="absolute top-6 right-6 text-slate-400 hover:text-slate-600">
+                            <Plus size={24} className="rotate-45" />
+                        </button>
+                        <h2 className="text-2xl font-bold text-slate-900 mb-6 flex items-center gap-2">
+                            <ArrowUpRight className="text-emerald-500" /> Record Student Fee
+                        </h2>
+                        <form onSubmit={handleAddFee} className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-bold text-slate-700 mb-1">Student</label>
+                                <select 
+                                    className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-emerald-500 outline-none"
+                                    value={feeForm.student_id}
+                                    onChange={e => setFeeForm({...feeForm, student_id: e.target.value, subject_id: ''})}
+                                    required
+                                >
+                                    <option value="">Select Student</option>
+                                    {students.map(s => <option key={s.id} value={s.id}>{s.name} ({s.student_code})</option>)}
+                                </select>
+                            </div>
+                            <div>
+                                <label className="block text-sm font-bold text-slate-700 mb-1">Subject</label>
+                                <select 
+                                    className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-emerald-500 outline-none"
+                                    value={feeForm.subject_id}
+                                    onChange={e => setFeeForm({...feeForm, subject_id: e.target.value})}
+                                    required
+                                >
+                                    <option value="">Select Subject</option>
+                                    {studentEnrollments.length > 0 ? (
+                                        studentEnrollments.map(en => <option key={en.subject_id} value={en.subject_id}>{en.lms_subjects?.name}</option>)
+                                    ) : (
+                                        subjects.map(s => <option key={s.id} value={s.id}>{s.name}</option>)
+                                    )}
+                                </select>
+                                {studentEnrollments.length === 0 && feeForm.student_id && (
+                                    <p className="text-xs text-amber-600 mt-1 font-medium italic">* Student is not enrolled in any subjects. Recording this fee will automatically enroll them.</p>
+                                )}
+                            </div>
+                            <div>
+                                <label className="block text-sm font-bold text-slate-700 mb-1">Month/Detail</label>
+                                <input 
+                                    type="text" 
+                                    className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-slate-500 outline-none"
+                                    value={feeForm.month_for}
+                                    onChange={e => setFeeForm({...feeForm, month_for: e.target.value})}
+                                    required
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-bold text-slate-700 mb-1">Amount (Rs.)</label>
+                                <input 
+                                    type="number" 
+                                    className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-slate-500 outline-none font-bold"
+                                    value={feeForm.amount}
+                                    onChange={e => setFeeForm({...feeForm, amount: e.target.value})}
+                                    required
+                                />
+                            </div>
+                            <button type="submit" disabled={submitting} className="w-full py-4 rounded-xl text-white font-bold bg-emerald-600 shadow-lg shadow-emerald-100 hover:bg-emerald-700 transition flex items-center justify-center gap-2">
+                                {submitting ? <Loader2 size={20} className="animate-spin" /> : <CheckCircle2 size={20} />}
+                                Record Fee & Enable Access
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            )}
+            
+            {showAddModal === 'salary' && (
                 <div className="fixed inset-0 z-[60] flex items-center justify-center p-6 bg-slate-900/60 backdrop-blur-sm">
                     <div className="bg-white w-full max-w-md rounded-3xl shadow-2xl p-8 relative overflow-hidden">
                         <button onClick={() => setShowAddModal(null)} className="absolute top-6 right-6 text-slate-400 hover:text-slate-600">
@@ -351,87 +570,34 @@ const FinanceDashboard = () => {
                         </button>
 
                         <h2 className="text-2xl font-bold text-slate-900 mb-6 flex items-center gap-2">
-                            {showAddModal === 'fee' ? <ArrowUpRight className="text-emerald-500" /> : <ArrowDownRight className="text-rose-500" />}
-                            {showAddModal === 'fee' ? 'Record Student Fee' : showAddModal === 'salary' ? 'Record Teacher Salary' : 'Record Expense'}
+                            <ArrowDownRight className="text-rose-500" /> Record Teacher Salary
                         </h2>
 
-                        <form onSubmit={showAddModal === 'fee' ? handleAddFee : showAddModal === 'salary' ? handleAddSalary : handleAddExpense} className="space-y-4">
-                            {showAddModal === 'fee' && (
-                                <div>
-                                    <label className="block text-sm font-bold text-slate-700 mb-1">Student</label>
-                                    <select 
-                                        className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-emerald-500 outline-none"
-                                        value={feeForm.student_id}
-                                        onChange={e => setFeeForm({...feeForm, student_id: e.target.value})}
-                                        required
-                                    >
-                                        <option value="">Select Student</option>
-                                        {students.map(s => <option key={s.id} value={s.id}>{s.name} ({s.student_code})</option>)}
-                                    </select>
-                                </div>
-                            )}
+                        <form onSubmit={handleAddSalary} className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-bold text-slate-700 mb-1">Teacher</label>
+                                <select 
+                                    className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-rose-500 outline-none"
+                                    value={salaryForm.teacher_id}
+                                    onChange={e => setSalaryForm({...salaryForm, teacher_id: e.target.value})}
+                                    required
+                                >
+                                    <option value="">Select Teacher</option>
+                                    {teachers.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+                                </select>
+                            </div>
 
-                            {showAddModal === 'salary' && (
-                                <div>
-                                    <label className="block text-sm font-bold text-slate-700 mb-1">Teacher</label>
-                                    <select 
-                                        className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-rose-500 outline-none"
-                                        value={salaryForm.teacher_id}
-                                        onChange={e => setSalaryForm({...salaryForm, teacher_id: e.target.value})}
-                                        required
-                                    >
-                                        <option value="">Select Teacher</option>
-                                        {teachers.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
-                                    </select>
-                                </div>
-                            )}
-
-                            {showAddModal === 'expense' && (
-                                <div>
-                                    <label className="block text-sm font-bold text-slate-700 mb-1">Category</label>
-                                    <select 
-                                        className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-rose-500 outline-none"
-                                        value={expenseForm.category}
-                                        onChange={e => setExpenseForm({...expenseForm, category: e.target.value})}
-                                        required
-                                    >
-                                        <option value="Building">Building (Rent/Cost)</option>
-                                        <option value="Electricity">Electricity</option>
-                                        <option value="Marketing">Marketing</option>
-                                        <option value="Equipment">Equipment</option>
-                                        <option value="Salaries">Worker Salaries</option>
-                                        <option value="Other">Other</option>
-                                    </select>
-                                </div>
-                            )}
-
-                            {(showAddModal === 'fee' || showAddModal === 'salary') && (
-                                <div>
-                                    <label className="block text-sm font-bold text-slate-700 mb-1">Month For</label>
-                                    <input 
-                                        type="text" 
-                                        placeholder="e.g. March 2026"
-                                        className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-slate-500 outline-none"
-                                        value={showAddModal === 'fee' ? feeForm.month_for : salaryForm.month_for}
-                                        onChange={e => showAddModal === 'fee' ? setFeeForm({...feeForm, month_for: e.target.value}) : setSalaryForm({...salaryForm, month_for: e.target.value})}
-                                        required
-                                    />
-                                </div>
-                            )}
-
-                            {showAddModal === 'expense' && (
-                                <div>
-                                    <label className="block text-sm font-bold text-slate-700 mb-1">Description</label>
-                                    <input 
-                                        type="text" 
-                                        placeholder="e.g. Electricity bill for March"
-                                        className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-slate-500 outline-none"
-                                        value={expenseForm.description}
-                                        onChange={e => setExpenseForm({...expenseForm, description: e.target.value})}
-                                        required
-                                    />
-                                </div>
-                            )}
+                            <div>
+                                <label className="block text-sm font-bold text-slate-700 mb-1">Month For</label>
+                                <input 
+                                    type="text" 
+                                    placeholder="e.g. March 2026"
+                                    className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-slate-500 outline-none"
+                                    value={salaryForm.month_for}
+                                    onChange={e => setSalaryForm({...salaryForm, month_for: e.target.value})}
+                                    required
+                                />
+                            </div>
 
                             <div>
                                 <label className="block text-sm font-bold text-slate-700 mb-1">Amount (Rs.)</label>
@@ -439,8 +605,8 @@ const FinanceDashboard = () => {
                                     type="number" 
                                     placeholder="0"
                                     className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-slate-500 outline-none font-bold"
-                                    value={showAddModal === 'fee' ? feeForm.amount : showAddModal === 'salary' ? salaryForm.amount : expenseForm.amount}
-                                    onChange={e => showAddModal === 'fee' ? setFeeForm({...feeForm, amount: e.target.value}) : showAddModal === 'salary' ? setSalaryForm({...salaryForm, amount: e.target.value}) : setExpenseForm({...expenseForm, amount: e.target.value})}
+                                    value={salaryForm.amount}
+                                    onChange={e => setSalaryForm({...salaryForm, amount: e.target.value})}
                                     required
                                 />
                             </div>
@@ -448,7 +614,73 @@ const FinanceDashboard = () => {
                             <button
                                 type="submit"
                                 disabled={submitting}
-                                className={`w-full py-4 rounded-xl text-white font-bold transition-all shadow-lg flex items-center justify-center gap-2 ${showAddModal === 'fee' ? 'bg-emerald-600 shadow-emerald-100 hover:bg-emerald-700' : 'bg-rose-600 shadow-rose-100 hover:bg-rose-700'}`}
+                                className={`w-full py-4 rounded-xl text-white font-bold transition-all shadow-lg flex items-center justify-center gap-2 bg-rose-600 shadow-rose-100 hover:bg-rose-700`}
+                            >
+                                {submitting ? <Loader2 size={20} className="animate-spin" /> : <CheckCircle2 size={20} />}
+                                {submitting ? 'Processing...' : 'Record Transaction'}
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            {showAddModal === 'expense' && (
+                <div className="fixed inset-0 z-[60] flex items-center justify-center p-6 bg-slate-900/60 backdrop-blur-sm">
+                    <div className="bg-white w-full max-w-md rounded-3xl shadow-2xl p-8 relative overflow-hidden">
+                        <button onClick={() => setShowAddModal(null)} className="absolute top-6 right-6 text-slate-400 hover:text-slate-600">
+                            <Plus size={24} className="rotate-45" />
+                        </button>
+
+                        <h2 className="text-2xl font-bold text-slate-900 mb-6 flex items-center gap-2">
+                            <ArrowDownRight className="text-rose-500" /> Record Expense
+                        </h2>
+
+                        <form onSubmit={handleAddExpense} className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-bold text-slate-700 mb-1">Category</label>
+                                <select 
+                                    className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-rose-500 outline-none"
+                                    value={expenseForm.category}
+                                    onChange={e => setExpenseForm({...expenseForm, category: e.target.value})}
+                                    required
+                                >
+                                    <option value="Building">Building (Rent/Cost)</option>
+                                    <option value="Electricity">Electricity</option>
+                                    <option value="Marketing">Marketing</option>
+                                    <option value="Equipment">Equipment</option>
+                                    <option value="Salaries">Worker Salaries</option>
+                                    <option value="Other">Other</option>
+                                </select>
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-bold text-slate-700 mb-1">Description</label>
+                                <input 
+                                    type="text" 
+                                    placeholder="e.g. Electricity bill for March"
+                                    className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-slate-500 outline-none"
+                                    value={expenseForm.description}
+                                    onChange={e => setExpenseForm({...expenseForm, description: e.target.value})}
+                                    required
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-bold text-slate-700 mb-1">Amount (Rs.)</label>
+                                <input 
+                                    type="number" 
+                                    placeholder="0"
+                                    className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-slate-500 outline-none font-bold"
+                                    value={expenseForm.amount}
+                                    onChange={e => setExpenseForm({...expenseForm, amount: e.target.value})}
+                                    required
+                                />
+                            </div>
+
+                            <button
+                                type="submit"
+                                disabled={submitting}
+                                className={`w-full py-4 rounded-xl text-white font-bold transition-all shadow-lg flex items-center justify-center gap-2 bg-rose-600 shadow-rose-100 hover:bg-rose-700`}
                             >
                                 {submitting ? <Loader2 size={20} className="animate-spin" /> : <CheckCircle2 size={20} />}
                                 {submitting ? 'Processing...' : 'Record Transaction'}

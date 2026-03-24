@@ -412,7 +412,10 @@ const FinanceDashboard = () => {
                                         })) : (
                                             <tr>
                                                 <td colSpan="5" className="px-6 py-12 text-center text-slate-400">
-                                                    No subjects found. Add subjects in the admin portal first.
+                                                    <p className="mb-4">No subjects found in the system.</p>
+                                                    <Link to="/curriculum" className="px-4 py-2 bg-indigo-600 text-white rounded-lg font-bold text-sm">
+                                                        Add Subjects First
+                                                    </Link>
                                                 </td>
                                             </tr>
                                         )}
@@ -684,9 +687,15 @@ const FinanceDashboard = () => {
                                                 required
                                             >
                                                 <option value="">Select Subject</option>
-                                                {enrollments.filter(e => e.student_id === selectedStudentForFee.id).map(en => (
-                                                    <option key={en.subject_id} value={en.subject_id}>{en.subject?.name}</option>
-                                                ))}
+                                                {enrollments.filter(e => e.student_id === selectedStudentForFee.id).length > 0 ? (
+                                                    enrollments.filter(e => e.student_id === selectedStudentForFee.id).map(en => (
+                                                        <option key={en.subject_id} value={en.subject_id}>{en.subject?.name || subjects.find(s => s.id === en.subject_id)?.name || `Subject ${en.subject_id}`}</option>
+                                                    ))
+                                                ) : (
+                                                    subjects.map(sub => (
+                                                        <option key={sub.id} value={sub.id}>{sub.name}</option>
+                                                    ))
+                                                )}
                                             </select>
                                         </div>
                                         <div>

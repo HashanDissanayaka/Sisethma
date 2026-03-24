@@ -687,15 +687,23 @@ const FinanceDashboard = () => {
                                                 required
                                             >
                                                 <option value="">Select Subject</option>
-                                                {enrollments.filter(e => e.student_id === selectedStudentForFee.id).length > 0 ? (
-                                                    enrollments.filter(e => e.student_id === selectedStudentForFee.id).map(en => (
-                                                        <option key={en.subject_id} value={en.subject_id}>{en.subject?.name || subjects.find(s => s.id === en.subject_id)?.name || `Subject ${en.subject_id}`}</option>
-                                                    ))
-                                                ) : (
-                                                    subjects.map(sub => (
-                                                        <option key={sub.id} value={sub.id}>{sub.name}</option>
-                                                    ))
-                                                )}
+                                                {(() => {
+                                                    // Merge subjects from enrollments and assigned_subjects in user record
+                                                    const enrolledIds = enrollments.filter(e => e.student_id === selectedStudentForFee.id).map(e => Number(e.subject_id));
+                                                    const assignedIds = selectedStudentForFee.assigned_subjects?.map(as => Number(as.subject_id)) || [];
+                                                    const uniqueIds = Array.from(new Set([...enrolledIds, ...assignedIds]));
+                                                    
+                                                    if (uniqueIds.length > 0) {
+                                                        return uniqueIds.map(subId => {
+                                                            const subject = subjects.find(s => s.id === subId);
+                                                            return <option key={subId} value={subId}>{subject?.name || `Subject ${subId}`}</option>;
+                                                        });
+                                                    } else {
+                                                        return subjects.map(sub => (
+                                                            <option key={sub.id} value={sub.id}>{sub.name}</option>
+                                                        ));
+                                                    }
+                                                })()}
                                             </select>
                                         </div>
                                         <div>

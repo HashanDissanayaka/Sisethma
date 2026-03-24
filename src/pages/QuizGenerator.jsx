@@ -49,7 +49,11 @@ const QuizGenerator = () => {
       const qs = await generateQuizQuestions({ topic: form.topic, grade: form.grade, count: Number(form.count) });
       setQuestions(qs.map((q, i) => ({ ...q, id: i + 1 })));
     } catch (e) {
-      setError('Failed to generate questions. Check your API key or try again. ' + e.message);
+      if (e.message.includes('429')) {
+        setError('Gemini API Rate Limit Hit (429). We attempted to retry, but you may need to wait 1-2 minutes before trying again or check your API key quota.');
+      } else {
+        setError('Failed to generate questions: ' + e.message);
+      }
     } finally {
       setLoading(false);
     }

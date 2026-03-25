@@ -114,6 +114,9 @@ const FinanceDashboard = () => {
         }
     };
 
+    const students = allUsers.filter(u => u.role === 'student');
+    const teachers = allUsers.filter(u => u.role === 'teacher');
+
     const handleAddFee = async (e) => {
         e.preventDefault();
         if (!feeForm.student_id || !feeForm.amount || !feeForm.subject_id) return;
@@ -208,8 +211,6 @@ const FinanceDashboard = () => {
         );
     }
 
-    const students = allUsers.filter(u => u.role === 'student');
-    const teachers = allUsers.filter(u => u.role === 'teacher');
     const studentEnrollments = enrollments.filter(e => e.student_id === Number(feeForm.student_id));
 
     return (
@@ -443,7 +444,7 @@ const FinanceDashboard = () => {
                                         {enrollments.map((en, idx) => (
                                             <tr key={idx} className="hover:bg-slate-50 transition">
                                                 <td className="px-6 py-4">
-                                                    <div className="font-bold text-slate-800">{en.lms_users?.name}</div>
+                                                    <div className="font-bold text-slate-800">{en.lms_users?.fullname}</div>
                                                     <div className="text-xs text-slate-400 font-mono">{en.lms_users?.student_code}</div>
                                                 </td>
                                                 <td className="px-6 py-4 text-slate-800 font-medium">{en.lms_subjects?.name}</td>
@@ -494,7 +495,7 @@ const FinanceDashboard = () => {
                                     <tbody className="divide-y divide-slate-100">
                                         {fees.map((f, idx) => (
                                             <tr key={idx} className="hover:bg-slate-50 transition">
-                                                <td className="px-6 py-4 font-bold text-slate-800">{f.lms_users?.name}</td>
+                                                <td className="px-6 py-4 font-bold text-slate-800">{f.lms_users?.fullname}</td>
                                                 <td className="px-6 py-4 text-slate-600 font-medium">{f.lms_subjects?.name || 'General'}</td>
                                                 <td className="px-6 py-4 text-slate-600 text-sm">{f.month_for}</td>
                                                 <td className="px-6 py-4 text-slate-600 text-sm">{f.payment_date}</td>
@@ -522,7 +523,7 @@ const FinanceDashboard = () => {
                                     <tbody className="divide-y divide-slate-100">
                                         {salaries.map((s, idx) => (
                                             <tr key={idx} className="hover:bg-slate-50 transition">
-                                                <td className="px-6 py-4 font-bold text-slate-800">{s.lms_users?.name}</td>
+                                                <td className="px-6 py-4 font-bold text-slate-800">{s.lms_users?.fullname}</td>
                                                 <td className="px-6 py-4 text-slate-600 text-sm">{s.month_for}</td>
                                                 <td className="px-6 py-4 text-slate-600 text-sm">{s.payment_date}</td>
                                                 <td className="px-6 py-4 text-rose-600 font-bold">Rs. {Number(s.amount).toLocaleString()}</td>
@@ -585,7 +586,7 @@ const FinanceDashboard = () => {
                                     required
                                 >
                                     <option value="">Select Student</option>
-                                    {students.map(s => <option key={s.id} value={s.id}>{s.name} ({s.student_code})</option>)}
+                                    {students.map(s => <option key={s.id} value={s.id}>{s.fullname} ({s.student_code})</option>)}
                                 </select>
                             </div>
                             <div>
@@ -650,7 +651,7 @@ const FinanceDashboard = () => {
                                 {feeSearchQuery && !selectedStudentForFee && (
                                     <div className="mt-2 max-h-40 overflow-y-auto border border-slate-100 rounded-xl shadow-inner divide-y divide-slate-50">
                                         {students.filter(s => 
-                                            s.name.toLowerCase().includes(feeSearchQuery.toLowerCase()) || 
+                                            s.fullname?.toLowerCase().includes(feeSearchQuery.toLowerCase()) || 
                                             s.student_code?.toLowerCase().includes(feeSearchQuery.toLowerCase())
                                         ).map(s => (
                                             <button 
@@ -658,12 +659,12 @@ const FinanceDashboard = () => {
                                                 type="button"
                                                 onClick={() => {
                                                     setSelectedStudentForFee(s);
-                                                    setFeeSearchQuery(s.name);
+                                                    setFeeSearchQuery(s.fullname);
                                                     setFeeForm({...feeForm, student_id: s.id, subject_id: ''});
                                                 }}
                                                 className="w-full text-left px-4 py-3 hover:bg-slate-50 transition text-sm font-medium text-slate-700"
                                             >
-                                                {s.name} <span className="text-slate-400 text-xs ml-2">Grade {s.grade}</span>
+                                                {s.fullname} <span className="text-slate-400 text-xs ml-2">Grade {s.grade}</span>
                                             </button>
                                         ))}
                                     </div>

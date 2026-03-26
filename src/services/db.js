@@ -221,7 +221,7 @@ export const deleteTimetableEntry = async (id) => {
 
 // --- FINANCE DB HANDLERS ---
 export const getFees = async () => {
-  const { data, error } = await supabase.from('lms_fees').select('*, lms_users(name, student_code), lms_subjects(name)').order('payment_date', { ascending: false });
+  const { data, error } = await supabase.from('lms_fees').select('*, lms_users(fullname, student_code), lms_subjects(name)').order('payment_date', { ascending: false });
   if (error) { console.error(error); return []; }
   return data;
 };
@@ -251,7 +251,7 @@ export const addFee = async (fee) => {
 };
 
 export const getSalaries = async () => {
-  const { data, error } = await supabase.from('lms_salaries').select('*, lms_users(name)').order('payment_date', { ascending: false });
+  const { data, error } = await supabase.from('lms_salaries').select('*, lms_users(fullname)').order('payment_date', { ascending: false });
   if (error) { console.error(error); return []; }
   return data;
 };
